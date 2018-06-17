@@ -129,105 +129,7 @@ def compile_all(econ_data, public_awareness, dji, google_trends, gold, sse, curr
     #group_tone1.to_csv('public_awareness_data.csv')
     return group_tone1
 
-def economic_data(in_file):
-    data = pd.read_csv(in_file, sep='\t', header=None)
-    data.columns = ['Date','Open','High','Low','Close','Volume','Market Cap']
-    BTC_econ_data = data
-    BTC_econ_data['Date'] = pd.to_datetime(BTC_econ_data['Date'])
-    
-    BTC_econ_data['Open'] = BTC_econ_data['Open'].str.replace(',', '')
-    BTC_econ_data['Open']= pd.to_numeric(BTC_econ_data['Open'])
 
-    BTC_econ_data['High'] = BTC_econ_data['High'].str.replace(',', '')
-    BTC_econ_data['High']= pd.to_numeric(BTC_econ_data['High'])
-
-    BTC_econ_data['Low'] = BTC_econ_data['Low'].str.replace(',', '')
-    BTC_econ_data['Low']= pd.to_numeric(BTC_econ_data['Low'])
-
-    BTC_econ_data['Close'] = BTC_econ_data['Close'].str.replace(',', '')
-    BTC_econ_data['Close']= pd.to_numeric(BTC_econ_data['Close'])
-
-    BTC_econ_data['Volume'] = BTC_econ_data['Volume'].str.replace(',', '')
-    BTC_econ_data['Volume']= pd.to_numeric(BTC_econ_data['Volume'])
-
-    BTC_econ_data['Market Cap'] = BTC_econ_data['Market Cap'].str.replace(',', '')
-    BTC_econ_data['Market Cap'] = pd.to_numeric(BTC_econ_data['Market Cap'])
-
-    return BTC_econ_data
-
-def dji_data(in_file):
-    dji = pd.read_csv(in_file, header=0)
-    dji['Date'] = pd.to_datetime(dji['Date'])
-    dji['DJI_Close'] = dji['Close']
-    dji = dji[['Date','DJI_Close']]
-    dji = dji.iloc[::-1]
-    return dji
-
-def google_adjustment_factor(d):
-    #where d is a numpy array
-    week = 0
-    for i in range(1135):
-        d[i][3] = d[week][2]/d[week][1]
-        if (i+1)% 7 == 0:
-            week += 7
-    return d  
-
-def google_normalized_search_freq(d):
-    for i in range(1135):
-        d[i][4] = d[i][1] * d[i][3]
-    return d
-
-def google_trends_data(daily_file, weekly_file, currency):
-    #Check manually that CSV column names do not clash
-    
-    daily = pd.read_csv(daily_file, sep=',', header = 1)
-    weekly = pd.read_csv(weekly_file, sep=',', header=1)
-    daily['Day'] = pd.to_datetime(daily['Day'])
-    weekly['Week'] = pd.to_datetime(weekly['Week'])
-    #join files on date
-    data = daily.set_index('Day').join(weekly.set_index('Week'))
-    data = data.reset_index()
-    # add adjustment factor and normalized search frequency columns
-    data['adjFAC'] = ''
-    data['NSF'] = ''
-    #handle non numeric data
-    data = data.replace(['<1'], [0])
-    data.iloc[:, 2] = pd.to_numeric(data.iloc[:, 2])
-    # turn to array to manipulate data
-    d = np.asarray(data)
-    adj_f_d = google_adjustment_factor(d)
-    NSF_d = google_normalized_search_freq(adj_f_d)
-    final = pd.DataFrame(NSF_d, columns = ['Day',currency +' SF',currency +' WSF','adjFAC','NSF'])
-    return final
- 
-def gold_price(infile):
-    gold = pd.read_csv(infile, sep=',')
-    gold['Gold_Close'] = gold['Close']
-    gold = gold[['Date', 'Gold_Close']]
-    gold['Date'] = pd.to_datetime(gold['Date'])
-    gold = gold.iloc[::-1]
-    return gold
-
-def sse_price(infile):
-    sse = pd.read_csv(infile, header=0)
-    sse['Date'] = pd.to_datetime(sse['Date'])
-    sse['SSE_Close'] = sse['Close']
-    sse = sse[['Date','SSE_Close']]
-    sse = sse.iloc[::-1]
-    return sse
-
-def compile_all(econ_data, public_awareness, dji, google_trends, gold, sse, currency):
-    result = econ_data.set_index('Date').join(public_awareness.set_index('SQLDATE'))
-    result1 = result.join(dji.set_index('Date'))
-    #back fill DJI closing price for weekends
-    result1['DJI_Close'] = result1['DJI_Close'].fillna(method='bfill')
-    result2 = result1.join(google_trends.set_index('Day'))
-    result3 = result2.join(gold.set_index('Date'))
-    result3['Gold_Close'] = result3['Gold_Close'].fillna(method='bfill')
-    result4 = result3.join(sse.set_index('Date'))
-    result4['SSE_Close']= result4['SSE_Close'].fillna(method='bfill')
-    #result4.to_csv('_training_data ' + currency)
-    return result4
 
 ## Additional Block chain technical features if required ##
 def chain_info(daily_t, diff, fee_percentage, hash_r, block_t ):
@@ -374,6 +276,7 @@ def macd(df):
     ewma24 = pd.stats.moments.ewma(close, 24)
     return (ewma12 - ewma24) 
 
+#### Y LABELS FOR DATA FRAME ####
 def y_labels(df):
     df['price'] = ''
     for i in range(1,len(df)-1):
